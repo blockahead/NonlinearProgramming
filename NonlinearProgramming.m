@@ -2,14 +2,95 @@ close all;
 clc;
 clear;
 
+%% 最適化対象の函数（制約なし）
+% QP
+QP_A = [ 4, 1;1, 2 ];
+if( det( QP_A ) <= 0 )
+    error( 'QP_Aは凸関数ではない' );
+end
+QP_b = [ -3;-4 ];
+
+calcFunction = @QP_Function; % 最適化対象の函数
+calcGradient = @QP_Gradient; % 函数の勾配
+calcHessian = @QP_Hessian; % 函数のHesse行列
+x_opt_Analytic = -( QP_A \ QP_b ); % 解析解
+
+% 描画範囲
 x_min = -10;
 x_max = 10;
 y_min = -10;
 y_max = 10;
-z_min = -10;
-z_max = 200;
+
+% 初期推定解
+x0 = [ -8, 8 ]';
+
+% 直線探索の収束判定パラメータ
+c = 0.01;
+% 刻み幅
+h = 0.5;
 
 
+% % 4thOrder
+% calcFunction = @cross_Function; % 最適化対象の函数
+% calcGradient = @cross_Gradient; % 函数の勾配
+% calcHessian = @cross_Hessian; % 函数のHesse行列
+% x_opt_Analytic = [ 0, 0 ]'; % 解析解
+% 
+% % 描画範囲
+% x_min = -10;
+% x_max = 10;
+% y_min = -10;
+% y_max = 10;
+% 
+% % 初期推定解
+% x0 = [ -8, 5 ]';
+% 
+% % 直線探索の収束判定パラメータ
+% c = 0.01;
+% % 刻み幅
+% h = 0.5;
+
+% % cos
+% calcFunction = @cos_Function; % 最適化対象の函数
+% calcGradient = @cos_Gradient; % 函数の勾配
+% calcHessian = @cos_Hessian; % 函数のHesse行列
+% x_opt_Analytic = [ ( 0 ), ( 0 ) ]'; % 解析解
+% 
+% % 描画範囲
+% x_min = -0.5;
+% x_max = 0.5;
+% y_min = -0.25;
+% y_max = 0.25;
+% 
+% % 初期推定解
+% x0 = [ -0.4, 0.2 ]';
+% 
+% % 直線探索の収束判定パラメータ
+% c = 0.01;
+% % 刻み幅
+% h = 0.03;
+
+% % Rosenbrock
+% calcFunction = @Rosenbrock_Function; % 最適化対象の函数
+% calcGradient = @Rosenbrock_Gradient; % 函数の勾配
+% calcHessian = @Rosenbrock_Hessian; % 函数のHesse行列
+% x_opt_Analytic = [ ( 1 ), ( 1 ) ]'; % 解析解
+% 
+% x_min = -1.5;
+% x_max = 1.5;
+% y_min = -1;
+% y_max = 3;
+% 
+% % 初期推定解
+% x0 = [ 0.1, 2.5 ]';
+% 
+% % 直線探索の収束判定パラメータ
+% c = 0.01;
+% % 刻み幅
+% h = 0.5;
+
+%% 評価函数の描画用
+% 評価函数の計算範囲
 x_vec = linspace( x_min, x_max, 31 )';
 y_vec = linspace( y_min, y_max, 31 )';
 
@@ -17,7 +98,7 @@ X = zeros( length( x_vec ), length( y_vec ) );
 Y = zeros( length( x_vec ), length( y_vec ) );
 Z = zeros( length( x_vec ), length( y_vec ) );
 
-%% 評価函数
+% 評価函数の計算
 for cnt_x = 1:length( x_vec )
     for cnt_y = 1:length( y_vec )
         X(cnt_x,cnt_y) = x_vec(cnt_x);
@@ -25,58 +106,48 @@ for cnt_x = 1:length( x_vec )
         Z(cnt_x,cnt_y) = calcFunction( [ x_vec(cnt_x), y_vec(cnt_y) ]' );
     end
 end
+z_min = min( min( Z, [], 1 ) );
+z_max = max( max( Z, [], 1 ) );
 
 %% 探索
-% 初期推定解
-x0 = [ -8, 8 ]';
-
-% 収束判定パラメータ
-c = 0.01;
-
-% 刻み幅
-h = 0.03;
-
-% 解析解
-x_opt_Analytic = [ ( 2 / 7 ), ( 13 / 7 ) ]';
-
 % 最急降下法
-[ x_opt_SDM, x_history_SDM ] = SteepestDescentMethod( x0, c, h );
+[ x_opt_SDM, x_history_SDM ] = SteepestDescentMethod( x0, c, h, calcFunction, calcGradient );
 z_history_SDM = zeros( size( x_history_SDM(:,1) ) );
 for cnt = 1:length( z_history_SDM )
-    z_history_SDM(cnt) = calcFunction( x_history_SDM(cnt,:) );
+    z_history_SDM(cnt) = calcFunction( x_history_SDM(cnt,:)' );
 end
 
 % 共軛勾配法
-[ x_opt_CGM, x_history_CGM ] = ConjugateGradientMethod( x0, c, h );
+[ x_opt_CGM, x_history_CGM ] = ConjugateGradientMethod( x0, c, h, calcFunction, calcGradient );
 z_history_CGM = zeros( size( x_history_CGM(:,1) ) );
 for cnt = 1:length( z_history_CGM )
-    z_history_CGM(cnt) = calcFunction( x_history_CGM(cnt,:) );
+    z_history_CGM(cnt) = calcFunction( x_history_CGM(cnt,:)' );
 end
 
 % Newton法
-[ x_opt_Newton, x_history_Newton] = NewtonMethod( x0, c, h );
+[ x_opt_Newton, x_history_Newton] = NewtonMethod( x0, c, calcGradient, calcHessian );
 z_history_Newton = zeros( size( x_history_Newton(:,1) ) );
 for cnt = 1:length( z_history_Newton)
-    z_history_Newton(cnt) = calcFunction( x_history_Newton(cnt,:) );
+    z_history_Newton(cnt) = calcFunction( x_history_Newton(cnt,:)' );
 end
 
 % 準Newton法（BFGS）
-[ x_opt_QNewton_BFGS, x_history_QNewton_BFGS] = QuasiNewtonMethod( x0, c, h, 'BFGS' );
+[ x_opt_QNewton_BFGS, x_history_QNewton_BFGS] = QuasiNewtonMethod( x0, c, h, calcFunction, calcGradient, 'BFGS' );
 z_history_QNewton_BFGS = zeros( size( x_history_QNewton_BFGS(:,1) ) );
 for cnt = 1:length( z_history_QNewton_BFGS)
-    z_history_QNewton_BFGS(cnt) = calcFunction( x_history_QNewton_BFGS(cnt,:) );
+    z_history_QNewton_BFGS(cnt) = calcFunction( x_history_QNewton_BFGS(cnt,:)' );
 end
 
 % 準Newton法（DFP）
-[ x_opt_QNewton_DFP, x_history_QNewton_DFP] = QuasiNewtonMethod( x0, c, h, 'DFP' );
+[ x_opt_QNewton_DFP, x_history_QNewton_DFP] = QuasiNewtonMethod( x0, c, h, calcFunction, calcGradient, 'DFP' );
 z_history_QNewton_DFP = zeros( size( x_history_QNewton_DFP(:,1) ) );
 for cnt = 1:length( z_history_QNewton_DFP)
-    z_history_QNewton_DFP(cnt) = calcFunction( x_history_QNewton_DFP(cnt,:) );
+    z_history_QNewton_DFP(cnt) = calcFunction( x_history_QNewton_DFP(cnt,:)' );
 end
 
 
 %% Plotting
-figure( 'Name', 'Mesh', 'Position', [ 3000, 10, 600, 1000 ] );
+figure( 'Name', 'Mesh', 'Position', [1300 50 600 900] );
 
 %% 上段
 subplot( 2, 1, 1 ); hold on;
@@ -107,6 +178,9 @@ plot3_QNewton_DFP = plot3( x_history_QNewton_DFP(:,1), x_history_QNewton_DFP(:,2
 % 各種設定
 colormap( jet(100) );
 view( [ -5, 50 ] );
+xlim( [ x_min, x_max ] );
+ylim( [ y_min, y_max ] );
+zlim( [ z_min, z_max ] );
 legend( ...
     [ plot3_SDM, plot3_CGM, plot3_Newton, plot3_QNewton_BFGS, plot3_QNewton_DFP ], ...
     '最急降下法', '共軛勾配法', 'Newton法', '準Newton法（BFGS）', '準Newton法（DFP）', 'Location', 'NorthEast' ...

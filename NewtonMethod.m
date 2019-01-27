@@ -1,4 +1,4 @@
-function [ x_opt, x_history ] = NewtonMethod( x0, c, ~ )
+function [ x_opt, x_history ] = NewtonMethod( x0, c, calcGradient, calcHessian )
     % ‰ğ‚Ì‰Šú„’è’l
     x = x0;
     
